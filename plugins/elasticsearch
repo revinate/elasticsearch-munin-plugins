@@ -58,6 +58,17 @@ my %plugins = (
             'non_heap_max' => { 'value' => 'jvm.mem.non_heap_max_in_bytes', 'name' => 'Non-heap max size', 'type' => 'GAUGE', },
         },
     },
+    'elasticsearch_jvm_threads' => {
+        'path_all' => '/_cluster/nodes/stats',
+        'path' => '/_cluster/nodes/_local/stats',
+        'graph' => {
+            'graph_title' => 'ElasticSearch jvm threads',
+        },
+        'values' => {
+            'count' => { 'value' => 'jvm.threads.count', 'name' => 'Num threads', 'type' => 'GAUGE', },
+            'peak_count' => { 'value' => 'jvm.threads.peak_count', 'name' => 'Peak threads', 'type' => 'GAUGE', },
+        },
+    },
 );
 
 # determine which plugin
