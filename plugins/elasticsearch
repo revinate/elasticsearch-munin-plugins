@@ -46,6 +46,18 @@ my %plugins = (
             'index_size' => { 'value' => 'indices.store.size_in_bytes', 'name' => 'Index size', 'type' => 'GAUGE', },
         },
     },
+    'elasticsearch_jvm_memory' => {
+        'path_all' => '/_cluster/nodes',
+        'path' => '/_cluster/nodes/_local',
+        'graph' => {
+            'graph_title' => 'ElasticSearch jvm memory',
+        },
+        'values' => {
+            'heap_max' => { 'value' => 'jvm.mem.heap_max_in_bytes', 'name' => 'Heap max size', 'type' => 'GAUGE', },
+            'heap_init' => { 'value' => 'jvm.mem.heap_init_in_bytes', 'name' => 'Heap init size', 'type' => 'GAUGE', },
+            'non_heap_max' => { 'value' => 'jvm.mem.non_heap_max_in_bytes', 'name' => 'Non-heap max size', 'type' => 'GAUGE', },
+        },
+    },
 );
 
 # determine which plugin
