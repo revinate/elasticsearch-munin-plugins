@@ -1,0 +1,184 @@
+#!/usr/bin/perl -w
+
+use strict;                   
+use LWP;                      
+use JSON qw/decode_json/;
+
+# default graph params
+my %graph_default = (
+    'graph_args' => '--base 1024',
+    'graph_category' => 'elasticsearch',
+    'graph_vlabel' => 'bytes',
+);
+
+# strategy based on symlink name
+my %plugins = (
+    'elasticsearch_cache' => {
+        'path_all' => '/_cluster/nodes/stats',
+        'path' => '/_cluster/nodes/_local/stats',
+        'graph' => {
+            'graph_title' => 'ElasticSearch cache',
+        },
+        'values' => {
+            'field_size' => { 'value' => 'indices.cache.field_size_in_bytes', 'name' => 'Field size', 'type' => 'GAUGE', },
+            'filter_size' => { 'value' => 'indices.cache.filter_size_in_bytes', 'name' => 'Filter size', 'type' => 'GAUGE', },
+        },
+    },
+);
+
+# determine which plugin
+my $plugin = getPluginDetails($0, \%plugins, \%graph_default);
+
+if (! defined($plugin)) {
+    die("invalid plugin [$0] is not properly configured!\n");
+}
+
+# mix-in run-time settings
+$plugin->{host} = exists($ENV{'HOST'}) ? $ENV{'HOST'} : '127.0.0.1';
+$plugin->{port} = exists($ENV{'PORT'}) ? $ENV{'PORT'} : 9200;
+# this determines whether we chart just for the local node or whether we chart all nodes in the cluster (default: local only)
+$plugin->{graph_all} = exists($ENV{'GRAPH_ALL_NODES'}) ? $ENV{'GRAPH_ALL_NODES'} : 0;
+
+# user agent
+my $ua = LWP::UserAgent->new;
+$ua->timeout(10);
+
+# determine run mode
+if (exists($ARGV[0]) && ($ARGV[0] eq 'config')) {
+    doOutputConfig($plugin, $ua);
+} else {
+    doOutputData($plugin, $ua);
+}
+
+exit;
+
+# output values for a single node for the provided plugin context
+sub outputNodeValues {
+    my $plugin = shift;
+    my $data = shift;
+    my $keyPrefix = shift;
+    foreach my $key (keys(%{$plugin->{values}})) {
+        my @nestedKeys = split(/\./, $plugin->{values}->{$key}->{value});
+        my $ptr = $data;
+        foreach my $nestedKey (@nestedKeys) {
+            if (exists($ptr->{$nestedKey})) {
+                $ptr = $ptr->{$nestedKey};
+            } else {
+                $ptr = 'U';
+                last;
+            }
+        }
+        print STDOUT (defined($keyPrefix) ? ($keyPrefix . '_') : ''), $key, ".value ", $ptr, "\n";
+    }
+}
+
+# fetch and output plugin data
+sub doOutputData {
+    my $plugin = shift;
+    my $ua = shift;
+    my $uri = getUriForPlugin($plugin);
+    my $data = getUriAndDecode($ua, $uri);
+    if (! $plugin->{graph_all}) {
+        my @keys = keys(%{$data->{nodes}});
+        my $key = $keys[0];
+        my $nodeData = $data->{nodes}->{$key};
+        outputNodeValues($plugin, $nodeData);
+    } else {
+        foreach my $nodeKey (keys(%{$data->{nodes}})) {
+            my $keyPrefix = $nodeKey;
+            $keyPrefix =~ s/\W/_/g;
+            my $nodeData = $data->{nodes}->{$nodeKey};
+            outputNodeValues($plugin, $nodeData, $keyPrefix);
+        }
+    }
+}
+
+# merge plugin-specific config with defaults
+sub mergeConfig {
+    my $h1 = shift;
+    my $h2 = shift;
+    my %final = %{$h1};
+    foreach my $key (keys(%{$h2})) {
+        $final{$key} = $h2->{$key};
+    }
+    return \%final;
+}
+
+# determine uri for plugin context
+sub getUriForPlugin {
+    my $plugin = shift;
+    return 'http://' . $plugin->{host} . ':' . $plugin->{port} . ($plugin->{graph_all} ? $plugin->{path_all} : $plugin->{path});
+}
+
+# fetch a uri and json decode
+sub getUriAndDecode {
+    my $ua = shift;
+    my $uri = shift;
+    my $res = $ua->get($uri, 'Content-Type' => 'application/json');
+    if (! $res->is_success) {
+        die("request for [$uri] returned " . $res->code . "\n");
+    }
+    my $data = decode_json($res->content);
+    if (! defined($data)) {
+        die("unable to parse response from [$uri]\n");
+    }
+    return $data;
+}
+
+# get list of es nodes as an array ref of hash refs containing keys 'key' and 'name'
+sub getElasticSearchNodes {
+    my $plugin = shift;
+    my $ua = shift;
+    my $uri = getUriForPlugin($plugin);
+    my $data = getUriAndDecode($ua, $uri);
+    my @nodes = ();
+    if (exists($data->{nodes})) {
+        foreach my $nodeKey (keys(%{$data->{nodes}})) {
+            my $node = $data->{nodes}->{$nodeKey};
+            $nodeKey =~ s/\W/_/g;
+            push(@nodes, { 'key' => $nodeKey, 'name' => $node->{name} });
+        }
+    }
+    return \@nodes;
+}
+
+# output graph config
+sub doOutputConfig {
+    my $plugin = shift;
+    my $ua = shift;
+    foreach my $key (sort(keys(%{$plugin->{graph}}))) {
+        print $key, " ", $plugin->{graph}->{$key}, "\n";
+    }
+    if (! $plugin->{graph_all}) {
+        foreach my $key (keys(%{$plugin->{values}})) {
+            print $key, ".label ", $plugin->{values}->{$key}->{name}, "\n";
+            print $key, ".type ", uc($plugin->{values}->{$key}->{type}), "\n";
+        }
+    } else {
+        my $nodes = getElasticSearchNodes($plugin, $ua);
+        foreach my $node (@{$nodes}) {
+            my $nodeKey = $node->{key};
+            foreach my $key (keys(%{$plugin->{values}})) {
+                print $nodeKey, '_', $key, ".label ", $node->{name}, " ", $plugin->{values}->{$key}->{name}, "\n";
+                print $nodeKey, '_', $key, ".type ", $node->{name}, " ", uc($plugin->{values}->{$key}->{type}), "\n";
+            }
+        }
+    }
+}
+
+# determine which plugin is being called based on the filename
+sub getPluginDetails {
+    my $fileName = shift;
+    my $plugins = shift;
+    my $graph_default = shift;
+    my @fileParts = split(/\//, $fileName);
+    my $baseName = $fileParts[-1];
+    if (exists($plugins->{$baseName})) {
+        my $plugin = $plugins->{$baseName};
+        $plugin->{graph} = exists($plugin->{graph}) ? mergeConfig($graph_default, $plugin->{graph}) : $graph_default;
+        return $plugin;
+    }
+    return undef;
+}
+
+exit;
