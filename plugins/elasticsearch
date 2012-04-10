@@ -62,7 +62,9 @@ my %plugins = (
         'path_all' => '/_cluster/nodes/stats',
         'path' => '/_cluster/nodes/_local/stats',
         'graph' => {
+            'graph_args' => '--base 1000',
             'graph_title' => 'ElasticSearch jvm threads',
+            'graph_vlabel' => 'threads',
         },
         'values' => {
             'count' => { 'value' => 'jvm.threads.count', 'name' => 'Num threads', 'type' => 'GAUGE', },
