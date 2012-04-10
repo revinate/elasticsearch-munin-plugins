@@ -36,6 +36,16 @@ my %plugins = (
             'num_docs' => { 'value' => 'indices.docs.count', 'name' => '# of documents', 'type' => 'GAUGE', },
         },
     },
+    'elasticsearch_index_size' => {
+        'path_all' => '/_cluster/nodes/stats',
+        'path' => '/_cluster/nodes/_local/stats',
+        'graph' => {
+            'graph_title' => 'ElasticSearch index size',
+        },
+        'values' => {
+            'index_size' => { 'value' => 'indices.store.size_in_bytes', 'name' => 'Index size', 'type' => 'GAUGE', },
+        },
+    },
 );
 
 # determine which plugin
@@ -172,7 +182,7 @@ sub doOutputConfig {
             my $nodeKey = $node->{key};
             foreach my $key (keys(%{$plugin->{values}})) {
                 print $nodeKey, '_', $key, ".label ", $node->{name}, " ", $plugin->{values}->{$key}->{name}, "\n";
-                print $nodeKey, '_', $key, ".type ", $node->{name}, " ", uc($plugin->{values}->{$key}->{type}), "\n";
+                print $nodeKey, '_', $key, ".type ", uc($plugin->{values}->{$key}->{type}), "\n";
             }
         }
     }
