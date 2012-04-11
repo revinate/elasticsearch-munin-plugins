@@ -33,7 +33,7 @@ my %plugins = (
             'graph_vlabel' => 'docs',
         },
         'values' => {
-            'num_docs' => { 'value' => 'indices.docs.count', 'name' => '# of documents', 'type' => 'GAUGE', },
+            'num_docs' => { 'value' => 'indices.docs.count', 'name' => 'num of documents', 'type' => 'GAUGE', },
         },
     },
     'elasticsearch_index_size' => {
