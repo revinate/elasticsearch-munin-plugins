@@ -67,6 +67,15 @@ my %plugins = (
             'peak_count' => { 'value' => 'jvm.threads.peak_count', 'name' => 'Peak threads', 'type' => 'GAUGE', },
         },
     },
+    'elasticsearch_open_fds' => {
+        'graph' => {
+            'graph_title' => 'ElasticSearch open file descriptors',
+            'graph_vlabel' => 'fds',
+        },
+        'values' => {
+            'num_fds' => { 'value' => 'process.open_file_descriptors', 'name' => 'Num of open fds', 'type' => 'GAUGE', },
+        },
+    },
 );
 
 # determine which plugin
