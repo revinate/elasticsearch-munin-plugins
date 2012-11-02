@@ -69,6 +69,7 @@ my %plugins = (
     },
     'elasticsearch_open_fds' => {
         'graph' => {
+            'graph_args' => '--base 1000',
             'graph_title' => 'ElasticSearch open file descriptors',
             'graph_vlabel' => 'fds',
         },
