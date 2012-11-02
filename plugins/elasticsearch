@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
-use strict;                   
-use LWP;                      
+use strict;
+use LWP;
 use JSON qw/decode_json/;
 
 # default graph params
@@ -11,11 +11,15 @@ my %graph_default = (
     'graph_vlabel' => 'bytes',
 );
 
+# ES paths for global/local stats
+my %paths = (
+    'all_nodes' => '/_cluster/nodes/stats?all=true',
+    'local_node' => '/_cluster/nodes/_local/stats?all=true',
+);
+
 # strategy based on symlink name
 my %plugins = (
     'elasticsearch_cache' => {
-        'path_all' => '/_cluster/nodes/stats',
-        'path' => '/_cluster/nodes/_local/stats',
         'graph' => {
             'graph_title' => 'ElasticSearch cache',
         },
@@ -25,8 +29,6 @@ my %plugins = (
         },
     },
     'elasticsearch_docs' => {
-        'path_all' => '/_cluster/nodes/stats',
-        'path' => '/_cluster/nodes/_local/stats',
         'graph' => {
             'graph_args' => '--base 1000',
             'graph_title' => 'ElasticSearch documents',
@@ -37,8 +39,6 @@ my %plugins = (
         },
     },
     'elasticsearch_index_size' => {
-        'path_all' => '/_cluster/nodes/stats',
-        'path' => '/_cluster/nodes/_local/stats',
         'graph' => {
             'graph_title' => 'ElasticSearch index size',
         },
@@ -47,20 +47,16 @@ my %plugins = (
         },
     },
     'elasticsearch_jvm_memory' => {
-        'path_all' => '/_cluster/nodes',
-        'path' => '/_cluster/nodes/_local',
         'graph' => {
             'graph_title' => 'ElasticSearch jvm memory',
         },
         'values' => {
-            'heap_max' => { 'value' => 'jvm.mem.heap_max_in_bytes', 'name' => 'Heap max size', 'type' => 'GAUGE', },
-            'heap_init' => { 'value' => 'jvm.mem.heap_init_in_bytes', 'name' => 'Heap init size', 'type' => 'GAUGE', },
-            'non_heap_max' => { 'value' => 'jvm.mem.non_heap_max_in_bytes', 'name' => 'Non-heap max size', 'type' => 'GAUGE', },
+            'heap_max' => { 'value' => 'jvm.mem.heap_committed_in_bytes', 'name' => 'Heap committed size', 'type' => 'GAUGE', },
+            'heap_used' => { 'value' => 'jvm.mem.heap_used_in_bytes', 'name' => 'Heap size', 'type' => 'GAUGE', },
+            'non_heap_max' => { 'value' => 'jvm.mem.non_heap_used_in_bytes', 'name' => 'Non-heap size', 'type' => 'GAUGE', },
         },
     },
     'elasticsearch_jvm_threads' => {
-        'path_all' => '/_cluster/nodes/stats',
-        'path' => '/_cluster/nodes/_local/stats',
         'graph' => {
             'graph_args' => '--base 1000',
             'graph_title' => 'ElasticSearch jvm threads',
@@ -154,7 +150,7 @@ sub mergeConfig {
 # determine uri for plugin context
 sub getUriForPlugin {
     my $plugin = shift;
-    return 'http://' . $plugin->{host} . ':' . $plugin->{port} . ($plugin->{graph_all} ? $plugin->{path_all} : $plugin->{path});
+    return 'http://' . $plugin->{host} . ':' . $plugin->{port} . ($plugin->{graph_all} ? $paths{'all_nodes'} : $paths{'local_node'});
 }
 
 # fetch a uri and json decode
