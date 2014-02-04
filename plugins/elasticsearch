@@ -15,7 +15,7 @@ my %graph_default = (
 my %plugins = (
     'elasticsearch_cache' => {
         'path_all' => '/_cluster/nodes/stats',
-        'path' => '/_cluster/nodes/_local/stats',
+        'path' => '/_cluster/nodes/_local/stats?all=true',
         'graph' => {
             'graph_title' => 'ElasticSearch cache',
         },
@@ -26,7 +26,7 @@ my %plugins = (
     },
     'elasticsearch_docs' => {
         'path_all' => '/_cluster/nodes/stats',
-        'path' => '/_cluster/nodes/_local/stats',
+        'path' => '/_cluster/nodes/_local/stats?all=true',
         'graph' => {
             'graph_args' => '--base 1000',
             'graph_title' => 'ElasticSearch documents',
@@ -38,7 +38,7 @@ my %plugins = (
     },
     'elasticsearch_index_size' => {
         'path_all' => '/_cluster/nodes/stats',
-        'path' => '/_cluster/nodes/_local/stats',
+        'path' => '/_cluster/nodes/_local/stats?all=true',
         'graph' => {
             'graph_title' => 'ElasticSearch index size',
         },
@@ -48,7 +48,7 @@ my %plugins = (
     },
     'elasticsearch_jvm_memory' => {
         'path_all' => '/_cluster/nodes',
-        'path' => '/_cluster/nodes/_local',
+        'path' => '/_cluster/nodes/_local?all=true',
         'graph' => {
             'graph_title' => 'ElasticSearch jvm memory',
         },
@@ -60,7 +60,7 @@ my %plugins = (
     },
     'elasticsearch_jvm_threads' => {
         'path_all' => '/_cluster/nodes/stats',
-        'path' => '/_cluster/nodes/_local/stats',
+        'path' => '/_cluster/nodes/_local/stats?all=true',
         'graph' => {
             'graph_args' => '--base 1000',
             'graph_title' => 'ElasticSearch jvm threads',
